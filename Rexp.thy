@@ -93,6 +93,22 @@ section \<open>Types and Terms\<close>
 
 section \<open>Lemmas, Automated Tools and Apply Scripts\<close>
 
+lemma Sequ_empty [simp]:
+  shows "A \<otimes> {} = {}"
+  and   "{} \<otimes> A = {}"
+  apply(auto simp add: Sequ_def)
+  done
+
+lemma Sequ_empty_string [simp]:
+  shows "A \<otimes> {[]} = A"
+  and   "{[]} \<otimes> A = A"
+  apply(simp_all add: Sequ_def)
+  done
+
+thm Sequ_empty_string
+
+
+
 (* general pattern:
 
 lemma name[modifiers]:
@@ -105,6 +121,13 @@ lemma name[modifiers]:
   done   
 *)
 
+lemma silly_example:
+  fixes x :: nat
+  assumes "x < 5"
+  shows "2 * x + 3 < 2 * 5 + 3"
+  using assms   
+  apply(auto)
+  done
 
 (* automated provers
 
@@ -122,31 +145,13 @@ lemma name[modifiers]:
   sledgehammer
 *)
 
-lemma silly_example:
-  fixes x :: nat
-  assumes "x < 5"
-  shows "2 * x + 3 < 2 * 5 + 3"
-  using assms   
-  apply(auto)
-  done
+
 
 (* aside: oops, sorry *)
 
 text \<open>Some Simple Properties about Sequential Composition\<close>
 
-lemma Sequ_empty_string [simp]:
-  shows "A \<otimes> {[]} = A"
-  and   "{[]} \<otimes> A = A"
-  apply(simp_all add: Sequ_def)
-  done
 
-thm Sequ_empty_string
-
-lemma Sequ_empty [simp]:
-  shows "A \<otimes> {} = {}"
-  and   "{} \<otimes> A = {}"
-  apply(auto simp add: Sequ_def)
-  done
 
 lemma Sequ_assoc: 
   shows "(A \<otimes> B) \<otimes> C = A \<otimes> (B \<otimes> C)"
@@ -282,78 +287,36 @@ lemma Der_Sequ [simp]:
 unfolding Der_def Sequ_def
 by (auto simp add: Cons_eq_append_conv)
 
-lemma Der_inter[simp]:   "Der a (A \<inter> B) = Der a A \<inter> Der a B"
+lemma 
+shows Der_inter[simp]:   "Der a (A \<inter> B) = Der a A \<inter> Der a B"
   and Der_compl[simp]:   "Der a (-A) = - Der a A"
   and Der_Union[simp]:   "Der a (Union M) = Union(Der a ` M)"
   and Der_UN[simp]:      "Der a (UN x:I. S x) = (UN x:I. Der a (S x))"
 by (auto simp: Der_def)
 
 
-
-
-lemma Star_decomp: 
+lemma Star_cons_decomp: 
   assumes "c # x \<in> A\<star>" 
   shows "\<exists>s1 s2. x = s1 @ s2 \<and> c # s1 \<in> A \<and> s2 \<in> A\<star>"
 using assms
-by (induct x\<equiv>"c # x" rule: Star2.induct) 
-   (auto simp add: append_eq_Cons_conv)
+apply(induct x\<equiv>"c # x" rule: Star2.induct) 
+apply(auto simp add: append_eq_Cons_conv)
+done
 
 lemma Star_Der_Sequ: 
   shows "Der c (A\<star>) \<subseteq> (Der c A) \<otimes> A\<star>"
 unfolding Der_def Sequ_def
-by(auto simp add: Star_decomp)
-
+apply(auto simp add: Star_cons_decomp)
+done
 
 
 lemma Star_cases1:
   shows "Star A \<subseteq> {[]} \<union> A \<otimes> Star A"
-proof -
-  {
-    fix s:: string
-    assume "s \<in> Star A"
-    then have "\<exists>n. s \<in> A \<up> n" by (simp add: Star_def)
-    then obtain n where a: "s \<in> A \<up> n" by blast
-    moreover
-    { assume "n = 0"
-      with a have "s \<in> A \<up> 0" by simp
-      then have "s = []" by simp
-      then have "s \<in> {[]} \<union> A \<otimes> Star A" by simp
-    }
-    moreover 
-    { assume "n > 0"
-      with a have "s \<in> A \<otimes> (A \<up> (n - 1))"
-        using Lang_pow.simps(2) by fastforce         
-      then have "s \<in> {[]} \<union> A \<otimes> Star A"
-        unfolding Star_def Sequ_def by auto
-    }
-    ultimately have "s \<in> {[]} \<union> A \<otimes> Star A" by auto
-  }
-  then show "Star A \<subseteq> {[]} \<union> A \<otimes> Star A" by auto
-qed
+  sorry
 
 lemma Star_cases2:
   shows "{[]} \<union> A \<otimes> Star A \<subseteq> Star A "
-proof -
-  {
-    fix s:: string
-    assume "s \<in> {[]} \<union> A \<otimes> Star A"
-    moreover
-    { assume "s \<in> {[]}"
-      then have "s \<in> A \<up> 0" by simp
-      then have "s \<in> Star A"
-        unfolding Star_def by blast 
-    }
-    moreover 
-    { assume "s \<in> A \<otimes> Star A"
-      then have "\<exists>n. s \<in> A \<otimes> (A \<up> n)" by (auto simp add: Sequ_def Star_def)
-      then obtain n where a: "s \<in> A \<otimes> (A \<up> n)" by blast
-      then have "s \<in> A \<up> (n + 1)" by simp
-      then have "s \<in> Star A" by (auto simp only: Star_def) 
-    }
-    ultimately have "s \<in> Star A" by auto
-  }
-  then show "{[]} \<union> A \<otimes> Star A \<subseteq> Star A" by auto
-qed
+  sorry
 
 lemma Star_cases:
   shows "Star A = {[]} \<union> A \<otimes> Star A"
@@ -374,17 +337,6 @@ proof -
   finally show "Der c (A\<star>) = (Der c A) \<otimes> A\<star>" .
 qed
 
-lemma Der_pow[simp]:
-  shows "Der c (A \<up> n) = 
-         (if n = 0 then {} else (Der c A) \<otimes> (A \<up> (n - 1)))"
-  apply(induct n arbitrary: A)
-  apply(auto simp add: Cons_eq_append_conv)
-  by (smt (verit, ccfv_threshold) Lang_pow.simps(2) Lang_pow_comm One_nat_def Sequ_def Suc_diff_1 append.right_neutral Sequ_assoc mem_Collect_eq)
-
-
-
-
-  
 
 
 
@@ -413,11 +365,6 @@ where
       else SEQ (der c r1) r2)"
 | "der c (STAR r) = SEQ (der c r) (STAR r)"
 
-fun
- ders :: "string \<Rightarrow> rexp \<Rightarrow> rexp"
-where
-  "ders [] r = r"
-| "ders (c # s) r = ders s (der c r)"
 
 lemma nullable_correctness:
   shows "nullable r  \<longleftrightarrow> [] \<in> (L r)"
@@ -428,14 +375,31 @@ lemma nullable_correctness:
 
 lemma der_correctness:
   shows "L (der c r) = Der c (L r)"
-  apply (induct r) 
-  apply(auto simp add: nullable_correctness Sequ_def)
-  using Der_def apply force
-  using Der_def apply auto[1]
-  apply (smt (verit, ccfv_SIG) Der_def append_eq_Cons_conv mem_Collect_eq)
-  using Der_def apply force
-  using Der_Sequ Sequ_def apply auto[1]
-  done
+sorry (*proof(induct r) *)
+
+
+
+definition
+  Ders :: "string \<Rightarrow> string set \<Rightarrow> string set"
+where
+  "Ders s A \<equiv> {s'. s @ s' \<in> A}"
+
+fun
+ ders :: "string \<Rightarrow> rexp \<Rightarrow> rexp"
+where
+  "ders [] r = r"
+| "ders (c # s) r = ders s (der c r)"
+
+lemma ders_correctness:
+  shows "L (ders s r) = Ders s (L r)"
+  by (induct s arbitrary: r)
+     (simp_all add: Ders_def der_correctness Der_def)
+
+lemma matcher_correctness:
+  shows "nullable (ders s r) \<longleftrightarrow> s \<in> L r"
+  sorry
+
+
 
 
 end
